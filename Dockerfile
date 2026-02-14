@@ -18,7 +18,7 @@ RUN uv pip install --system . && \
 COPY src/ src/
 
 # Копируем frontend (просто статика) в папку static
-COPY frontend/ src/static/
+COPY static/ src/static/
 
 # Healthcheck — проверяем API
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

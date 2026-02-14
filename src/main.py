@@ -1,4 +1,5 @@
 # Импорты стандартной библиотеки Python
+import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Annotated, AsyncGenerator
@@ -24,6 +25,9 @@ from src.service import (
     get_url_by_slug,
     is_valid_url_regex,
 )
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -54,26 +58,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Монтируем папку со статикой
-frontend_dir = os.path.join(os.path.dirname(__name__), "static")
-
-if os.path.exists(frontend_dir):
-    app.mount(
-        "/",
-        StaticFiles(directory=frontend_dir, html=True),
-        name="static",
-    )
-else:
-
-    @app.get("/")  # type: ignore[untyped-decorator]
-    def read_root() -> dict[str, str]:
-        """
-        Обработчик GET-запроса для отображения статуса приложения.
-
-        Возвращает сообщение о том, что frontend еще не скомпилирован.
-        """
-        return {"status": "frontend not built yet, serve only API"}
-
 
 @app.get("/api/health")  # type: ignore[untyped-decorator]
 def health() -> dict[str, str]:
@@ -99,19 +83,6 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-@app.get("/short_url")  # type: ignore[untyped-decorator]
-async def serve_frontend() -> RedirectResponse:
-    """
-    Обработчик GET-запроса для отображения frontend.
-
-    Перенаправляет пользователя на главную страницу frontend.
-
-    Returns:
-        RedirectResponse: Ответ с перенаправлением на frontend
-    """
-    return RedirectResponse(url="/short_url")
-
-
 @app.post("/short_url")  # type: ignore[untyped-decorator]
 async def generate_slug(
     long_url: Annotated[str, Body(embed=True)],
@@ -130,6 +101,7 @@ async def generate_slug(
     Raises:
         HTTPException: При невалидном URL или ошибках ��енерации
     """
+    logger.info(f"Получен запрос на сокращение: {long_url}")
     res = await is_valid_url_regex(long_url)
     if res is False:
         raise HTTPException(
@@ -143,6 +115,7 @@ async def generate_slug(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось сгенерировать slug",
         )
+    logging.info(f"Сгенерирован slug для {long_url}: {new_slug}")
     return {"short_url": new_slug}
 
 
@@ -176,3 +149,24 @@ async def redirect_to_url(
     return RedirectResponse(
         url=long_url, status_code=status.HTTP_302_FOUND
     )
+
+
+# Монтируем папку со статикой
+frontend_dir = os.path.join(os.path.dirname(__file__), "static")
+
+if os.path.exists(frontend_dir):
+    app.mount(
+        "/",
+        StaticFiles(directory=frontend_dir, html=True),
+        name="static",
+    )
+else:
+
+    @app.get("/")  # type: ignore[untyped-decorator]
+    def read_root() -> dict[str, str]:
+        """
+        Обработчик GET-запроса для отображения статуса приложения.
+
+        Возвращает сообщение о том, что frontend еще не скомпилирован.
+        """
+        return {"status": "frontend not built yet, serve only API"}
