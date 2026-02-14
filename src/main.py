@@ -1,4 +1,5 @@
 # Импорты стандартной библиотеки Python
+import os
 from contextlib import asynccontextmanager
 from typing import Annotated, AsyncGenerator
 
@@ -18,7 +19,11 @@ from src.exceptions import (
     NoLongUrlFoundError,
     SlugAlreadyExistsError,
 )
-from src.service import generate_short_url, get_url_by_slug, is_valid_url_regex
+from src.service import (
+    generate_short_url,
+    get_url_by_slug,
+    is_valid_url_regex,
+)
 
 
 @asynccontextmanager
@@ -48,8 +53,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+
+# Монтируем папку со статикой
+frontend_dir = os.path.join(os.path.dirname(__name__), "static")
+
+if os.path.exists(frontend_dir):
+    app.mount(
+        "/",
+        StaticFiles(directory=frontend_dir, html=True),
+        name="static",
+    )
+else:
+
+    @app.get("/")  # type: ignore[untyped-decorator]
+    def read_root() -> dict[str, str]:
+        """
+        Обработчик GET-запроса для отображения статуса приложения.
+
+        Возвращает сообщение о том, что frontend еще не скомпилирован.
+        """
+        return {"status": "frontend not built yet, serve only API"}
+
+
+@app.get("/api/health")  # type: ignore[untyped-decorator]
+def health() -> dict[str, str]:
+    """
+    Обработчик GET-запроса для проверки работоспособности приложения.
+
+    Возвращает сообщение о том, что приложение работает.
+    """
+    return {"status": "healthy"}
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -66,7 +99,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-@app.get("/short_url")
+@app.get("/short_url")  # type: ignore[untyped-decorator]
 async def serve_frontend() -> RedirectResponse:
     """
     Обработчик GET-запроса для отображения frontend.
@@ -76,10 +109,10 @@ async def serve_frontend() -> RedirectResponse:
     Returns:
         RedirectResponse: Ответ с перенаправлением на frontend
     """
-    return RedirectResponse(url="/frontend/index.html")
+    return RedirectResponse(url="/short_url")
 
 
-@app.post("/short_url")
+@app.post("/short_url")  # type: ignore[untyped-decorator]
 async def generate_slug(
     long_url: Annotated[str, Body(embed=True)],
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -106,14 +139,14 @@ async def generate_slug(
     try:
         new_slug = await generate_short_url(long_url, session)
     except SlugAlreadyExistsError:
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось сгенерировать slug",
         )
     return {"short_url": new_slug}
 
 
-@app.get("/{slug}")
+@app.get("/{slug}")  # type: ignore[untyped-decorator]
 async def redirect_to_url(
     slug: str,
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -136,8 +169,10 @@ async def redirect_to_url(
     try:
         long_url = await get_url_by_slug(slug, session)
     except NoLongUrlFoundError:
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ссылка не существует",
         )
-    return RedirectResponse(url=long_url, status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(
+        url=long_url, status_code=status.HTTP_302_FOUND
+    )

@@ -33,7 +33,7 @@ async def add_slug_to_database(
     try:
         await session.commit()
     except IntegrityError:
-        raise SlugAlreadyExistsError
+        raise SlugAlreadyExistsError  # noqa: B904
 
 
 async def get_long_url_by_slug_from_database(

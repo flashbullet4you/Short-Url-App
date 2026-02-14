@@ -1,9 +1,9 @@
 document.getElementById('shortenForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    
+
     const longUrl = document.getElementById('longUrl').value;
     const resultDiv = document.getElementById('result');
-    
+
     try {
         const response = await fetch('/short_url', {
             method: 'POST',
@@ -12,7 +12,7 @@ document.getElementById('shortenForm').addEventListener('submit', async function
             },
             body: JSON.stringify({ long_url: longUrl })
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             const shortUrl = window.location.origin + '/' + data.short_url;

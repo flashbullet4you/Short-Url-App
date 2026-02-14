@@ -2,12 +2,36 @@ services:
   db:
     image: postgres:17
     environment:
-      POSTRGES_DB: postgres
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "6432:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_TYPE=postgresql
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+    depends_on:
+      - db
+      # - redis
+
+  # redis:
+  #   image: redis:7
+  #   ports:
+  #     - "6379:6379"
+
 volumes:
   postgres_data:

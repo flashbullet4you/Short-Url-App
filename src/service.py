@@ -10,7 +10,9 @@ from src.exceptions import NoLongUrlFoundError, SlugAlreadyExistsError
 from src.shortener import generate_random_slug
 
 
-async def generate_short_url(long_url: str, session: AsyncSession) -> str:
+async def generate_short_url(
+    long_url: str, session: AsyncSession
+) -> str:
     """
     Генерирует короткий идентификатор для длинного URL и сохраняет его в базе данных.
 

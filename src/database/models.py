@@ -5,7 +5,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 """
 
 
-class Base(DeclarativeBase):
+class Base(DeclarativeBase):  # type: ignore[misc]
     """
     Базовый класс для всех моделей SQLAlchemy в приложении.
     Наследуется от DeclarativeBase для поддержки декларативного стиля определения моделей.
